@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Capture and Comment</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to bottom right, #e3f2fd, #fce4ec);
+      padding: 40px;
+      text-align: center;
+    }
+
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 25px;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+    }
+
+    #camera {
+      border: 5px solid #90caf9;
+      border-radius: 15px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    #capture-btn {
+      margin-top: 25px;
+      padding: 14px 30px;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(to right, #42a5f5, #ab47bc);
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+    }
+
+    #capture-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+    }
+
+    #message {
+      margin-top: 30px;
+      font-size: 18px;
+      color: #333;
+      font-weight: 500;
+    }
+
+    .loading {
+      color: #5e35b1;
+      font-style: italic;
+      animation: blink 1.2s infinite;
+    }
+
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0.4; }
+      100% { opacity: 1; }
+    }
+
+    #captured-image {
+      display: none;
+    }
+
+    canvas {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📸  AI Rizzler</h1>
+
+  <video id="camera" width="640" height="480" autoplay></video>
+  <br>
+  <button id="capture-btn">✨ Capture & Analyze</button>
+
+  <canvas id="canvas"></canvas>
+  <img id="captured-image" src="" alt="Captured Image">
+
+  <p id="message"></p>
+
+  <script>
+    const video = document.getElementById('camera');
+    const captureButton = document.getElementById('capture-btn');
+    const canvas = document.getElementById('canvas');
+    const capturedImage = document.getElementById('captured-image');
+    const message = document.getElementById('message');
+
+    // Start webcam stream
+    function startWebcam() {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          video.srcObject = stream;
+        })
+        .catch(err => {
+          console.log('Error accessing webcam: ' + err);
+          message.innerHTML = "⚠️ Error accessing webcam.";
+        });
+    }
+
+    // Capture frame from webcam and process
+    function captureImage() {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = canvas.toDataURL('image/png');
+      sendImageToServer(imageData);
+    }
+
+    // Send image to server for comment
+    function sendImageToServer(imageData) {
+      message.className = "loading";
+      message.textContent = "🧠 Thinking... Generating AI comment...";
+
+      fetch('/capture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_data: imageData })
+      })
+      .then(response => response.json())
+      .then(data => {
+        message.className = "";
+        if (data.comment) {
+          message.innerHTML = `<strong>💬 AI Says:</strong> ${data.comment}`;
+        } else {
+          message.innerHTML = `<span style="color:red;">Error: ${data.error || 'No response'}</span>`;
+        }
+      })
+      .catch(error => {
+        message.className = "";
+        message.innerHTML = `<span style="color:red;">❌ Network Error: ${error}</span>`;
+      });
+    }
+
+    // Hook up
+    window.onload = startWebcam;
+    captureButton.onclick = captureImage;
+  </script>
+
+</body>
+</html>
